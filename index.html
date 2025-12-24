@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,8 +15,9 @@
             background: linear-gradient(135deg, #1a1a2e, #16213e);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             overflow: hidden;
+            flex-direction: column;
         }
-        
+
         .clock-container {
             position: relative;
             width: 300px;
@@ -25,17 +27,17 @@
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 
+            box-shadow:
                 0 8px 32px rgba(0, 0, 0, 0.3),
                 inset 0 0 20px rgba(0, 0, 0, 0.2);
         }
-        
+
         .clock-face {
             position: relative;
             width: 100%;
             height: 100%;
         }
-        
+
         .number {
             position: absolute;
             font-size: 20px;
@@ -43,32 +45,80 @@
             color: rgba(255, 255, 255, 0.8);
             text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
         }
-        
-        .number1 { top: 33px; right: 89px; }
-        .number2 { top: 75px; right: 43px; }
-        .number3 { top: 135px; right: 20px; }
-        .number4 { top: 196px; right: 40px; }
-        .number5 { top: 239px; right: 85px; }
-        .number6 { bottom: 20px; left: 145px; }
-        .number7 { top: 240px; left: 90px; }
-        .number8 { top: 192px; left: 40px; }
-        .number9 { top: 135px; left: 20px; }
-        .number10 { top: 72px; left: 40px; }
-        .number11 { top: 33px; left: 83px; }
-        .number12 { top: 16px; left: 139px; }
-        
+
+        .number1 {
+            top: 33px;
+            right: 89px;
+        }
+
+        .number2 {
+            top: 75px;
+            right: 43px;
+        }
+
+        .number3 {
+            top: 135px;
+            right: 20px;
+        }
+
+        .number4 {
+            top: 196px;
+            right: 40px;
+        }
+
+        .number5 {
+            top: 239px;
+            right: 85px;
+        }
+
+        .number6 {
+            bottom: 20px;
+            left: 145px;
+        }
+
+        .number7 {
+            top: 240px;
+            left: 90px;
+        }
+
+        .number8 {
+            top: 192px;
+            left: 40px;
+        }
+
+        .number9 {
+            top: 135px;
+            left: 20px;
+        }
+
+        .number10 {
+            top: 72px;
+            left: 40px;
+        }
+
+        .number11 {
+            top: 33px;
+            left: 83px;
+        }
+
+        .number12 {
+            top: 16px;
+            left: 139px;
+        }
+
         .hand {
             position: absolute;
             transform-origin: bottom center;
             cursor: grab;
             border-radius: 10px;
             box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        
+
         .hand:active {
             cursor: grabbing;
         }
-        
+
         .hour-hand {
             width: 8px;
             height: 80px;
@@ -77,7 +127,7 @@
             background: linear-gradient(to top, #ffffff, #cccccc);
             z-index: 3;
         }
-        
+
         .minute-hand {
             width: 6px;
             height: 110px;
@@ -86,7 +136,16 @@
             background: linear-gradient(to top, #ffffff, #cccccc);
             z-index: 2;
         }
-        
+
+        .second-hand {
+            width: 2px;
+            height: 120px;
+            top: 30px;
+            left: 149px;
+            background: #ff4d4d;
+            z-index: 1;
+        }
+
         .center-dot {
             position: absolute;
             width: 16px;
@@ -98,7 +157,7 @@
             z-index: 4;
             box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
         }
-        
+
         .tick {
             position: absolute;
             width: 2px;
@@ -108,7 +167,7 @@
             left: 149px;
             transform-origin: center 140px;
         }
-        
+
         .time-display {
             position: absolute;
             bottom: -50px;
@@ -120,8 +179,30 @@
             text-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
             letter-spacing: 1px;
         }
+
+        .reset-btn {
+            margin-top: 66px;
+            padding: 10px 24px;
+            font-size: 16px;
+            color: #fff;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .reset-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .hand.no-transition {
+            transition: none;
+        }
     </style>
 </head>
+
 <body>
     <div class="clock-container">
         <div class="clock-face">
@@ -138,7 +219,7 @@
             <div class="tick" style="transform: rotate(270deg);"></div>
             <div class="tick" style="transform: rotate(300deg);"></div>
             <div class="tick" style="transform: rotate(330deg);"></div>
-            
+
             <!-- 数字 -->
             <div class="number number12">12</div>
             <div class="number number1">1</div>
@@ -152,137 +233,191 @@
             <div class="number number9">9</div>
             <div class="number number10">10</div>
             <div class="number number11">11</div>
-            
+
             <!-- 指针 -->
             <div class="hand hour-hand" id="hourHand"></div>
             <div class="hand minute-hand" id="minuteHand"></div>
+            <div class="hand second-hand" id="secondHand"></div>
             <div class="center-dot"></div>
         </div>
-        <div class="time-display" id="timeDisplay">00:00</div>
+        <div class="time-display" id="timeDisplay">00:00:00</div>
     </div>
-    
+
+    <button class="reset-btn" id="resetBtn">复位到当前时间</button>
+
     <script>
         const hourHand = document.getElementById('hourHand');
         const minuteHand = document.getElementById('minuteHand');
+        const secondHand = document.getElementById('secondHand');
         const timeDisplay = document.getElementById('timeDisplay');
-        
+        const resetBtn = document.getElementById('resetBtn');
+
+        let tgtH = 0, tgtM = 0, tgtS = 0;   // 目标角度
+        let rafId = null;
+
         let isDragging = false;
         let currentHand = null;
         let startAngle = 0;
         let currentAngle = 0;
-        
-        // 初始化时间
-        let hours = 12;
-        let minutes = 0;
-        
-        // 更新指针位置
+        let isRealTime = true;
+        let timer = null;
+
+        let now = new Date();
+        let hours = now.getHours();
+        let minutes = now.getMinutes();
+        let seconds = now.getSeconds();
+
         function updateHands() {
-            const hourDegree = (hours % 12) * 30 + (minutes / 60) * 30;
-            const minuteDegree = minutes * 6;
-            
-            hourHand.style.transform = `rotate(${hourDegree}deg)`;
-            minuteHand.style.transform = `rotate(${minuteDegree}deg)`;
-            updateTimeDisplay();
+            if (rafId) return;
+            rafId = requestAnimationFrame(() => {
+                // 计算
+                const h = (hours % 12) * 30 + (minutes / 60) * 30;
+                const m = minutes * 6 + (seconds / 60) * 6;
+                const s = seconds * 6;
+                // 写入
+                hourHand.style.transform = `rotate(${h}deg)`;
+                minuteHand.style.transform = `rotate(${m}deg)`;
+                secondHand.style.transform = `rotate(${s}deg)`;
+                updateTimeDisplay();
+                rafId = null;
+            });
         }
-        
-        // 更新时间显示
+
         function updateTimeDisplay() {
             const displayHours = hours < 10 ? '0' + hours : hours;
             const displayMinutes = minutes < 10 ? '0' + minutes : minutes;
-            timeDisplay.textContent = `${displayHours}:${displayMinutes}`;
+            const displaySeconds = seconds < 10 ? '0' + seconds : seconds;
+            timeDisplay.textContent = `${displayHours}:${displayMinutes}:${displaySeconds}`;
         }
-        
-        // 获取鼠标相对于时钟中心的角度
+
         function getAngle(e) {
             const rect = document.querySelector('.clock-container').getBoundingClientRect();
             const centerX = rect.left + rect.width / 2;
             const centerY = rect.top + rect.height / 2;
-            
+
             const x = e.clientX - centerX;
             const y = e.clientY - centerY;
-            
+
             let angle = Math.atan2(y, x) * 180 / Math.PI + 90;
             if (angle < 0) angle += 360;
-            
+
             return angle;
         }
-        
-        // 鼠标按下事件
+
         function handleMouseDown(e, hand) {
             isDragging = true;
             currentHand = hand;
             startAngle = getAngle(e);
-            
+
             if (hand === hourHand) {
                 currentAngle = (hours % 12) * 30 + (minutes / 60) * 30;
+            } else if (hand === minuteHand) {
+                currentAngle = minutes * 6 + (seconds / 60) * 6;
             } else {
-                currentAngle = minutes * 6;
+                currentAngle = seconds * 6;
             }
-            
+
+            stopRealTime();
+            e.preventDefault();
+            [hourHand, minuteHand, secondHand].forEach(h => h.classList.add('no-transition'));
             e.preventDefault();
         }
-        
-        // 鼠标移动事件
+
         function handleMouseMove(e) {
             if (!isDragging) return;
-            
+
             const newAngle = getAngle(e);
             let angleDiff = newAngle - startAngle;
-            
-            // 计算新的角度
             let finalAngle = currentAngle + angleDiff;
-            
-            // 标准化角度
             finalAngle = ((finalAngle % 360) + 360) % 360;
-            
+
             if (currentHand === hourHand) {
-                // 时针拖动，每30度为一小时
                 hours = Math.round(finalAngle / 30) % 12;
                 if (hours === 0) hours = 12;
                 updateHands();
-            } else {
-                // 分针拖动，每6度为一分钟
+            } else if (currentHand === minuteHand) {
                 const lastMin = minutes;
                 minutes = Math.round(finalAngle / 6) % 60;
-                if (lastMin > 45 && minutes < 15) hours = hours % 12 + 1;       // 顺时针跨过 0 点
-                else if (lastMin < 15 && minutes > 45) hours = (hours + 10) % 12 + 1; // 逆时针跨过 0 点
+                if (lastMin > 45 && minutes < 15) hours = hours % 12 + 1;
+                else if (lastMin < 15 && minutes > 45) hours = (hours + 10) % 12 + 1;
+                updateHands();
+            } else {
+                const lastSec = seconds;
+                seconds = Math.round(finalAngle / 6) % 60;
+                if (lastSec > 45 && seconds < 15) {
+                    minutes = (minutes + 1) % 60;
+                    if (minutes === 0) hours = hours % 12 + 1;
+                } else if (lastSec < 15 && seconds > 45) {
+                    minutes = (minutes + 59) % 60;
+                    if (minutes === 59) hours = (hours + 11) % 12 + 1;
+                }
                 updateHands();
             }
         }
-        
-        // 鼠标释放事件
+
         function handleMouseUp() {
             isDragging = false;
             currentHand = null;
+            [hourHand, minuteHand, secondHand].forEach(h => h.classList.remove('no-transition'));
         }
-        
-        // 添加事件监听器
+
+        function stopRealTime() {
+            isRealTime = false;
+            if (timer) {
+                clearInterval(timer);
+                timer = null;
+            }
+        }
+
+        function realTimeUpdate() {
+            if (!isRealTime) return;
+            const now = new Date();
+            hours = now.getHours();
+            minutes = now.getMinutes();
+            seconds = now.getSeconds();
+            updateHands();
+        }
+
+        function resetToNow() {
+            const now = new Date();
+            hours = now.getHours();
+            minutes = now.getMinutes();
+            seconds = now.getSeconds();
+            isRealTime = true;
+            updateHands();
+            if (!timer) timer = setInterval(realTimeUpdate, 1000);
+        }
+
+        resetBtn.addEventListener('click', resetToNow);
+
         hourHand.addEventListener('mousedown', (e) => handleMouseDown(e, hourHand));
         minuteHand.addEventListener('mousedown', (e) => handleMouseDown(e, minuteHand));
+        secondHand.addEventListener('mousedown', (e) => handleMouseDown(e, secondHand));
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
-        
-        // 触摸事件支持
+
         hourHand.addEventListener('touchstart', (e) => {
             const touch = e.touches[0];
             handleMouseDown(touch, hourHand);
         });
-        
         minuteHand.addEventListener('touchstart', (e) => {
             const touch = e.touches[0];
             handleMouseDown(touch, minuteHand);
         });
-        
+        secondHand.addEventListener('touchstart', (e) => {
+            const touch = e.touches[0];
+            handleMouseDown(touch, secondHand);
+        });
         document.addEventListener('touchmove', (e) => {
             if (!isDragging) return;
             const touch = e.touches[0];
             handleMouseMove(touch);
         });
-        
         document.addEventListener('touchend', handleMouseUp);
-        
-        // 初始化
+
         updateHands();
+        timer = setInterval(realTimeUpdate, 1000);
     </script>
 </body>
+
 </html>
