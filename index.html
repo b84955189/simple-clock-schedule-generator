@@ -144,6 +144,7 @@
             left: 149px;
             background: #ff4d4d;
             z-index: 1;
+            transition: transform 0.1s linear;
         }
 
         .center-dot {
@@ -198,7 +199,7 @@
         }
 
         .hand.no-transition {
-            transition: none;
+            transition: none !important;
         }
     </style>
 </head>
@@ -252,37 +253,83 @@
         const timeDisplay = document.getElementById('timeDisplay');
         const resetBtn = document.getElementById('resetBtn');
 
-        let tgtH = 0, tgtM = 0, tgtS = 0;   // 目标角度
         let rafId = null;
-
         let isDragging = false;
         let currentHand = null;
         let startAngle = 0;
         let currentAngle = 0;
         let isRealTime = true;
         let timer = null;
+        
+        // 记录上一次的时间值，用于判断跨0点
+        let lastHours = -1;
+        let lastMinutes = -1;
+        let lastSeconds = -1;
 
+        // 初始化时间
         let now = new Date();
         let hours = now.getHours();
         let minutes = now.getMinutes();
         let seconds = now.getSeconds();
+        lastHours = hours;
+        lastMinutes = minutes;
+        lastSeconds = seconds;
 
+        // 更新指针位置和时间显示
         function updateHands() {
             if (rafId) return;
             rafId = requestAnimationFrame(() => {
-                // 计算
+                // 标记需要临时移除过渡的指针
+                const noTransitionHands = [];
+                
+                // 1. 处理秒针跨0点（59→0）
+                const isSecondReset = lastSeconds === 59 && seconds === 0;
+                if (isSecondReset) {
+                    noTransitionHands.push(secondHand);
+                }
+
+                // 2. 处理分针跨0点（59→0）
+                const isMinuteReset = lastMinutes === 59 && minutes === 0;
+                if (isMinuteReset) {
+                    noTransitionHands.push(minuteHand);
+                }
+
+                // 3. 处理时针跨0点（11→12 或 23→0）
+                const isHourReset = (lastHours % 12 === 11 && hours % 12 === 0);
+                if (isHourReset) {
+                    noTransitionHands.push(hourHand);
+                }
+
+                // 给需要的指针添加无过渡类
+                noTransitionHands.forEach(hand => hand.classList.add('no-transition'));
+
+                // 计算各指针角度
                 const h = (hours % 12) * 30 + (minutes / 60) * 30;
                 const m = minutes * 6 + (seconds / 60) * 6;
                 const s = seconds * 6;
-                // 写入
+                
+                // 应用角度变换
                 hourHand.style.transform = `rotate(${h}deg)`;
                 minuteHand.style.transform = `rotate(${m}deg)`;
                 secondHand.style.transform = `rotate(${s}deg)`;
+                
+                // 更新数字显示
                 updateTimeDisplay();
+                
+                // 延迟恢复过渡动画（根据指针类型设置不同延迟）
+                setTimeout(() => {
+                    noTransitionHands.forEach(hand => hand.classList.remove('no-transition'));
+                }, isSecondReset ? 100 : 200);
+
+                // 更新上一次的时间记录
+                lastHours = hours;
+                lastMinutes = minutes;
+                lastSeconds = seconds;
                 rafId = null;
             });
         }
 
+        // 更新数字时间显示
         function updateTimeDisplay() {
             const displayHours = hours < 10 ? '0' + hours : hours;
             const displayMinutes = minutes < 10 ? '0' + minutes : minutes;
@@ -290,6 +337,7 @@
             timeDisplay.textContent = `${displayHours}:${displayMinutes}:${displaySeconds}`;
         }
 
+        // 计算鼠标/触摸点相对于时钟中心的角度
         function getAngle(e) {
             const rect = document.querySelector('.clock-container').getBoundingClientRect();
             const centerX = rect.left + rect.width / 2;
@@ -304,11 +352,13 @@
             return angle;
         }
 
+        // 开始拖动指针
         function handleMouseDown(e, hand) {
             isDragging = true;
             currentHand = hand;
             startAngle = getAngle(e);
 
+            // 获取当前指针的角度
             if (hand === hourHand) {
                 currentAngle = (hours % 12) * 30 + (minutes / 60) * 30;
             } else if (hand === minuteHand) {
@@ -317,50 +367,80 @@
                 currentAngle = seconds * 6;
             }
 
+            // 停止实时更新
             stopRealTime();
-            e.preventDefault();
+            // 移除过渡动画，让拖动更流畅
             [hourHand, minuteHand, secondHand].forEach(h => h.classList.add('no-transition'));
             e.preventDefault();
         }
 
+        // 拖动指针时的处理
         function handleMouseMove(e) {
             if (!isDragging) return;
 
             const newAngle = getAngle(e);
             let angleDiff = newAngle - startAngle;
             let finalAngle = currentAngle + angleDiff;
-            finalAngle = ((finalAngle % 360) + 360) % 360;
+            finalAngle = ((finalAngle % 360) + 360) % 360; // 确保角度在0-360之间
 
+            // 保存当前值用于跨0点判断
+            const prevHour = hours;
+            const prevMinute = minutes;
+            const prevSecond = seconds;
+
+            // 根据拖动的指针更新对应时间
             if (currentHand === hourHand) {
-                hours = Math.round(finalAngle / 30) % 12;
-                if (hours === 0) hours = 12;
+                // 时针：30度/小时
+                const newHour = Math.round(finalAngle / 30) % 12;
+                hours = newHour === 0 ? 12 : newHour;
+                // 处理24小时制
+                if (prevHour > 12 && hours === 12) hours = 12;
                 updateHands();
             } else if (currentHand === minuteHand) {
-                const lastMin = minutes;
-                minutes = Math.round(finalAngle / 6) % 60;
-                if (lastMin > 45 && minutes < 15) hours = hours % 12 + 1;
-                else if (lastMin < 15 && minutes > 45) hours = (hours + 10) % 12 + 1;
+                // 分针：6度/分钟
+                const newMinute = Math.round(finalAngle / 6) % 60;
+                // 处理分针跨0点时的小时更新
+                if (Math.abs(minutes - newMinute) > 45) {
+                    hours = (hours % 12) + (newMinute < minutes ? 1 : -1);
+                    if (hours < 1) hours += 12;
+                    if (hours > 24) hours -= 24;
+                }
+                minutes = newMinute;
                 updateHands();
             } else {
-                const lastSec = seconds;
-                seconds = Math.round(finalAngle / 6) % 60;
-                if (lastSec > 45 && seconds < 15) {
-                    minutes = (minutes + 1) % 60;
-                    if (minutes === 0) hours = hours % 12 + 1;
-                } else if (lastSec < 15 && seconds > 45) {
-                    minutes = (minutes + 59) % 60;
-                    if (minutes === 59) hours = (hours + 11) % 12 + 1;
+                // 秒针：6度/秒
+                const newSecond = Math.round(finalAngle / 6) % 60;
+                // 处理秒针跨0点时的分钟更新
+                if (Math.abs(seconds - newSecond) > 45) {
+                    minutes = (minutes + (newSecond < seconds ? 1 : -1)) % 60;
+                    // 分钟跨0点时更新小时
+                    if (minutes < 0) {
+                        minutes += 60;
+                        hours = (hours - 1) % 12;
+                        if (hours < 1) hours += 12;
+                    } else if (minutes === 0 && newSecond < seconds) {
+                        hours = (hours % 12) + 1;
+                        if (hours > 12) hours = 1;
+                    }
                 }
+                seconds = newSecond;
                 updateHands();
             }
         }
 
+        // 结束拖动指针
         function handleMouseUp() {
             isDragging = false;
             currentHand = null;
+            // 恢复过渡动画
             [hourHand, minuteHand, secondHand].forEach(h => h.classList.remove('no-transition'));
+            // 重置时间记录，避免拖动后的跨0点误判
+            lastHours = hours;
+            lastMinutes = minutes;
+            lastSeconds = seconds;
         }
 
+        // 停止实时时间更新
         function stopRealTime() {
             isRealTime = false;
             if (timer) {
@@ -369,33 +449,49 @@
             }
         }
 
+        // 实时更新时间（每秒）
         function realTimeUpdate() {
             if (!isRealTime) return;
             const now = new Date();
+            // 先保存当前值用于跨0点判断
+            lastHours = hours;
+            lastMinutes = minutes;
+            lastSeconds = seconds;
+            // 更新新值
             hours = now.getHours();
             minutes = now.getMinutes();
             seconds = now.getSeconds();
             updateHands();
         }
 
+        // 复位到当前系统时间
         function resetToNow() {
             const now = new Date();
+            // 保存旧值用于跨0点判断
+            lastHours = hours;
+            lastMinutes = minutes;
+            lastSeconds = seconds;
+            // 更新新值
             hours = now.getHours();
             minutes = now.getMinutes();
             seconds = now.getSeconds();
             isRealTime = true;
             updateHands();
+            // 重启定时器
             if (!timer) timer = setInterval(realTimeUpdate, 1000);
         }
 
+        // 事件监听
         resetBtn.addEventListener('click', resetToNow);
 
+        // 鼠标事件
         hourHand.addEventListener('mousedown', (e) => handleMouseDown(e, hourHand));
         minuteHand.addEventListener('mousedown', (e) => handleMouseDown(e, minuteHand));
         secondHand.addEventListener('mousedown', (e) => handleMouseDown(e, secondHand));
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
 
+        // 触摸事件（移动端兼容）
         hourHand.addEventListener('touchstart', (e) => {
             const touch = e.touches[0];
             handleMouseDown(touch, hourHand);
@@ -412,9 +508,11 @@
             if (!isDragging) return;
             const touch = e.touches[0];
             handleMouseMove(touch);
+            e.preventDefault(); // 阻止页面滚动
         });
         document.addEventListener('touchend', handleMouseUp);
 
+        // 初始化
         updateHands();
         timer = setInterval(realTimeUpdate, 1000);
     </script>
