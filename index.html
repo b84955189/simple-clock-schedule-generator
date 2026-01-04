@@ -4,7 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>可拖动的时钟</title>
+    <title>可拖动的时钟与计时器</title>
+    <!-- 引入Font Awesome开源图标库 -->
+    <link rel="stylesheet" href="css/all.min.css">
     <style>
         body {
             display: flex;
@@ -12,10 +14,132 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            background: #000;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             overflow: hidden;
             flex-direction: column;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        /* 悬浮球样式 */
+        .float-ball {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: grab;
+            z-index: 100;
+            transition: all 0.3s ease;
+            user-select: none;
+        }
+
+        .float-ball:hover {
+            background: rgba(100, 149, 237, 1);
+            transform: scale(1.05);
+        }
+
+        .float-ball:active {
+            cursor: grabbing;
+        }
+
+        .float-ball i {
+            font-size: 24px;
+            color: white;
+            pointer-events: none; /* 关键修复：让图标不拦截鼠标事件 */
+        }
+
+        /* 按钮面板样式 - 默认隐藏 */
+        .controls-panel {
+            position: fixed;
+            bottom: 100px;
+            right: 30px;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            padding: 15px 10px;
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 99;
+            min-width: 120px;
+        }
+
+        .controls-panel.show {
+            display: flex;
+        }
+
+        /* 功能分区容器 */
+        .control-section {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .control-section:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        /* 分区标题 */
+        .section-title {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 5px;
+            padding-left: 5px;
+        }
+
+        /* 按钮组容器 */
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        /* 快捷时长按钮组特殊样式 */
+        .quick-time-btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .clocks-container {
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .clock-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .clock-title {
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 15px;
+            font-size: 20px;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
         }
 
         .clock-container {
@@ -30,6 +154,11 @@
             box-shadow:
                 0 8px 32px rgba(0, 0, 0, 0.3),
                 inset 0 0 20px rgba(0, 0, 0, 0.2);
+            cursor: grab;
+        }
+
+        .clock-container:active {
+            cursor: grabbing;
         }
 
         .clock-face {
@@ -147,6 +276,19 @@
             transition: transform 0.1s linear;
         }
 
+        /* 计时器指针样式不同，用于区分 */
+        .timer-clock .hour-hand {
+            background: linear-gradient(to top, #4dff4d, #33cc33);
+        }
+
+        .timer-clock .minute-hand {
+            background: linear-gradient(to top, #4dff4d, #33cc33);
+        }
+
+        .timer-clock .second-hand {
+            background: #4dff4d;
+        }
+
         .center-dot {
             position: absolute;
             width: 16px;
@@ -171,87 +313,432 @@
 
         .time-display {
             position: absolute;
-            bottom: -50px;
+            bottom: 66px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 24px;
+            font-size: 26px;
             font-weight: bold;
             color: rgba(255, 255, 255, 0.9);
             text-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
             letter-spacing: 1px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 4px 10px;
+            backdrop-filter: blur(5px);
+            z-index: 0;
         }
 
-        .reset-btn {
-            margin-top: 66px;
-            padding: 10px 24px;
-            font-size: 16px;
+        /* 统一按钮样式 */
+        .control-btn {
+            padding: 8px 12px;
+            font-size: 14px;
+            font-weight: bold;
             color: #fff;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
+            border: none;
+            border-radius: 6px;
             backdrop-filter: blur(10px);
             cursor: pointer;
             transition: background 0.3s;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        /* 快捷时长按钮样式 */
+        .quick-time-btn {
+            padding: 6px 10px;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(100, 149, 237, 0.4);
+        }
+
+        .quick-time-btn:hover {
+            background: rgba(100, 149, 237, 0.4);
+        }
+
+        /* 图标样式 */
+        .btn-icon {
+            font-size: 16px;
+        }
+
+        /* 时钟复位按钮样式 */
+        .reset-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
         .reset-btn:hover {
             background: rgba(255, 255, 255, 0.2);
         }
 
+        /* 计时器开始按钮样式 */
+        .start-btn {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(77, 255, 77, 0.5);
+        }
+
+        .start-btn:hover {
+            background: rgba(77, 255, 77, 0.5);
+        }
+
+        /* 计时器停止按钮样式 */
+        .stop-btn {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 77, 77, 0.5);
+        }
+
+        .stop-btn:hover {
+            background: rgba(255, 77, 77, 0.5);
+        }
+
         .hand.no-transition {
             transition: none !important;
+        }
+
+        /* 适配移动端 */
+        @media (max-width: 768px) {
+            .control-btn {
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+            .quick-time-btn {
+                padding: 5px 8px;
+                font-size: 11px;
+            }
+            .btn-icon {
+                font-size: 14px;
+            }
+            .section-title {
+                font-size: 12px;
+            }
+            .float-ball {
+                width: 50px;
+                height: 50px;
+                bottom: 20px;
+                right: 20px;
+            }
+            .float-ball i {
+                font-size: 20px;
+            }
+            .controls-panel {
+                bottom: 80px;
+                right: 20px;
+                min-width: 100px;
+                padding: 10px 8px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .clocks-container {
+                gap: 20px;
+            }
+            .clock-container {
+                width: 250px;
+                height: 250px;
+            }
+            .number {
+                font-size: 18px;
+            }
+            .time-display {
+                font-size: 22px;
+            }
         }
     </style>
 </head>
 
 <body>
-    <div class="clock-container">
-        <div class="clock-face">
-            <!-- 刻度 -->
-            <div class="tick" style="transform: rotate(0deg);"></div>
-            <div class="tick" style="transform: rotate(30deg);"></div>
-            <div class="tick" style="transform: rotate(60deg);"></div>
-            <div class="tick" style="transform: rotate(90deg);"></div>
-            <div class="tick" style="transform: rotate(120deg);"></div>
-            <div class="tick" style="transform: rotate(150deg);"></div>
-            <div class="tick" style="transform: rotate(180deg);"></div>
-            <div class="tick" style="transform: rotate(210deg);"></div>
-            <div class="tick" style="transform: rotate(240deg);"></div>
-            <div class="tick" style="transform: rotate(270deg);"></div>
-            <div class="tick" style="transform: rotate(300deg);"></div>
-            <div class="tick" style="transform: rotate(330deg);"></div>
-
-            <!-- 数字 -->
-            <div class="number number12">12</div>
-            <div class="number number1">1</div>
-            <div class="number number2">2</div>
-            <div class="number number3">3</div>
-            <div class="number number4">4</div>
-            <div class="number number5">5</div>
-            <div class="number number6">6</div>
-            <div class="number number7">7</div>
-            <div class="number number8">8</div>
-            <div class="number number9">9</div>
-            <div class="number number10">10</div>
-            <div class="number number11">11</div>
-
-            <!-- 指针 -->
-            <div class="hand hour-hand" id="hourHand"></div>
-            <div class="hand minute-hand" id="minuteHand"></div>
-            <div class="hand second-hand" id="secondHand"></div>
-            <div class="center-dot"></div>
-        </div>
-        <div class="time-display" id="timeDisplay">00:00:00</div>
+    <!-- 悬浮球 -->
+    <div class="float-ball" id="floatBall">
+        <i class="fas fa-cog btn-icon"></i>
     </div>
 
-    <button class="reset-btn" id="resetBtn">复位到当前时间</button>
+    <!-- 按钮面板 - 默认隐藏 -->
+    <div class="controls-panel" id="controlsPanel">
+        <!-- 时钟控制区 -->
+        <div class="control-section">
+            <span class="section-title">时钟控制：</span>
+            <div class="btn-group">
+                <button class="control-btn reset-btn" id="resetBtn" title="复位到当前时间">
+                    <i class="fas fa-sync-alt btn-icon"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 计时器控制区 -->
+        <div class="control-section">
+            <span class="section-title">计时器控制：</span>
+            <div class="btn-group">
+                <!-- 基础控制按钮 -->
+                <button class="control-btn start-btn" id="startBtn" title="开始/暂停计时">
+                    <i class="fas fa-play btn-icon"></i>
+                </button>
+                <button class="control-btn stop-btn" id="stopBtn" title="停止并重置计时">
+                    <i class="fas fa-stop btn-icon"></i>
+                </button>
+                
+                <!-- 快捷时长按钮组 -->
+                <div class="quick-time-btn-group">
+                    <button class="control-btn quick-time-btn" data-time="60" title="1分钟计时">1分钟</button>
+                    <button class="control-btn quick-time-btn" data-time="180" title="3分钟计时">3分钟</button>
+                    <button class="control-btn quick-time-btn" data-time="300" title="5分钟计时">5分钟</button>
+                    <button class="control-btn quick-time-btn" data-time="600" title="10分钟计时">10分钟</button>
+                    <button class="control-btn quick-time-btn" data-time="900" title="15分钟计时">15分钟</button>
+                    <button class="control-btn quick-time-btn" data-time="1800" title="30分钟计时">30分钟</button>
+                    <button class="control-btn quick-time-btn" data-time="2400" title="40分钟计时">40分钟</button>
+                    <button class="control-btn quick-time-btn" data-time="2700" title="45分钟计时">45分钟</button>
+                    <button class="control-btn quick-time-btn" data-time="3600" title="1小时计时">60分钟</button>
+					<button class="control-btn quick-time-btn" data-time="5400" title="1小时半计时">90分钟</button>
+					<button class="control-btn quick-time-btn" data-time="7200" title="2小时计时">120分钟</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="clocks-container" id="clocksContainer">
+        <!-- 原有时钟 -->
+        <div class="clock-wrapper">
+            <div class="clock-container" id="clockContainer">
+                <div class="clock-face">
+                    <!-- 刻度 -->
+                    <div class="tick" style="transform: rotate(0deg);"></div>
+                    <div class="tick" style="transform: rotate(30deg);"></div>
+                    <div class="tick" style="transform: rotate(60deg);"></div>
+                    <div class="tick" style="transform: rotate(90deg);"></div>
+                    <div class="tick" style="transform: rotate(120deg);"></div>
+                    <div class="tick" style="transform: rotate(150deg);"></div>
+                    <div class="tick" style="transform: rotate(180deg);"></div>
+                    <div class="tick" style="transform: rotate(210deg);"></div>
+                    <div class="tick" style="transform: rotate(240deg);"></div>
+                    <div class="tick" style="transform: rotate(270deg);"></div>
+                    <div class="tick" style="transform: rotate(300deg);"></div>
+                    <div class="tick" style="transform: rotate(330deg);"></div>
+
+                    <!-- 数字 -->
+                    <div class="number number12">12</div>
+                    <div class="number number1">1</div>
+                    <div class="number number2">2</div>
+                    <div class="number number3">3</div>
+                    <div class="number number4">4</div>
+                    <div class="number number5">5</div>
+                    <div class="number number6">6</div>
+                    <div class="number number7">7</div>
+                    <div class="number number8">8</div>
+                    <div class="number number9">9</div>
+                    <div class="number number10">10</div>
+                    <div class="number number11">11</div>
+
+                    <!-- 指针 -->
+                    <div class="hand hour-hand" id="hourHand"></div>
+                    <div class="hand minute-hand" id="minuteHand"></div>
+                    <div class="hand second-hand" id="secondHand"></div>
+                    <div class="center-dot"></div>
+
+                    <div class="time-display" id="timeDisplay">00:00:00</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 新增计时器时钟 -->
+        <div class="clock-wrapper">
+            <div class="clock-container timer-clock" id="timerContainer">
+                <div class="clock-face">
+                    <!-- 刻度 -->
+                    <div class="tick" style="transform: rotate(0deg);"></div>
+                    <div class="tick" style="transform: rotate(30deg);"></div>
+                    <div class="tick" style="transform: rotate(60deg);"></div>
+                    <div class="tick" style="transform: rotate(90deg);"></div>
+                    <div class="tick" style="transform: rotate(120deg);"></div>
+                    <div class="tick" style="transform: rotate(150deg);"></div>
+                    <div class="tick" style="transform: rotate(180deg);"></div>
+                    <div class="tick" style="transform: rotate(210deg);"></div>
+                    <div class="tick" style="transform: rotate(240deg);"></div>
+                    <div class="tick" style="transform: rotate(270deg);"></div>
+                    <div class="tick" style="transform: rotate(300deg);"></div>
+                    <div class="tick" style="transform: rotate(330deg);"></div>
+
+                    <!-- 数字 -->
+                    <div class="number number12">12</div>
+                    <div class="number number1">1</div>
+                    <div class="number number2">2</div>
+                    <div class="number number3">3</div>
+                    <div class="number number4">4</div>
+                    <div class="number number5">5</div>
+                    <div class="number number6">6</div>
+                    <div class="number number7">7</div>
+                    <div class="number number8">8</div>
+                    <div class="number number9">9</div>
+                    <div class="number number10">10</div>
+                    <div class="number number11">11</div>
+
+                    <!-- 指针 -->
+                    <div class="hand hour-hand" id="timerHourHand"></div>
+                    <div class="hand minute-hand" id="timerMinuteHand"></div>
+                    <div class="hand second-hand" id="timerSecondHand"></div>
+                    <div class="center-dot"></div>
+
+                    <div class="time-display" id="timerDisplay">00:00:00</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 音频元素用于计时结束提示音 -->
+    <audio id="alertSound" preload="auto">
+        <source src="audio/alert-1.mp3" type="audio/mpeg">
+        <!-- 这里可以添加其他格式的音频源作为备选 -->
+    </audio>
 
     <script>
+        // 悬浮球和面板控制
+        const floatBall = document.getElementById('floatBall');
+        const controlsPanel = document.getElementById('controlsPanel');
+        
+        // 悬浮球拖动相关变量
+        let isDraggingFloatBall = false;
+        let floatBallOffsetX = 0;
+        let floatBallOffsetY = 0;
+        
+        // 切换面板显示/隐藏
+        function togglePanel() {
+            controlsPanel.classList.toggle('show');
+            // 切换悬浮球图标
+            const icon = floatBall.querySelector('i');
+            if (controlsPanel.classList.contains('show')) {
+                icon.className = 'fas fa-times btn-icon';
+                // 关键修复：显示面板时重新计算位置
+                updatePanelPosition();
+            } else {
+                icon.className = 'fas fa-cog btn-icon';
+            }
+        }
+        
+        // 关键修复：更新面板位置（跟随悬浮球）
+        function updatePanelPosition() {
+            if (!controlsPanel.classList.contains('show')) return;
+            
+            const ballRect = floatBall.getBoundingClientRect();
+            // 面板显示在悬浮球上方，右侧对齐
+            const panelTop = ballRect.top - controlsPanel.offsetHeight - 10;
+            const panelLeft = ballRect.left + (ballRect.width - controlsPanel.offsetWidth);
+            
+            controlsPanel.style.left = `${panelLeft}px`;
+            controlsPanel.style.top = `${panelTop}px`;
+            controlsPanel.style.right = 'auto';
+            controlsPanel.style.bottom = 'auto';
+        }
+        
+        // 点击其他区域关闭面板
+        document.addEventListener('click', function(e) {
+            const isClickOnBall = floatBall.contains(e.target);
+            const isClickOnPanel = controlsPanel.contains(e.target);
+            
+            if (!isClickOnBall && !isClickOnPanel && controlsPanel.classList.contains('show')) {
+                controlsPanel.classList.remove('show');
+                floatBall.querySelector('i').className = 'fas fa-cog btn-icon';
+            }
+        });
+        
+        // 悬浮球点击事件（单独处理图标点击）
+        floatBall.addEventListener('click', function(e) {
+            // 只有点击悬浮球本身（非拖动状态）才切换面板
+            if (!isDraggingFloatBall) {
+                togglePanel();
+            }
+        });
+        
+        // 悬浮球拖动事件
+        floatBall.addEventListener('mousedown', function(e) {
+            isDraggingFloatBall = true;
+            const rect = floatBall.getBoundingClientRect();
+            floatBallOffsetX = e.clientX - rect.left;
+            floatBallOffsetY = e.clientY - rect.top;
+            floatBall.style.cursor = 'grabbing';
+            e.stopPropagation();
+        });
+        
+        document.addEventListener('mousemove', function(e) {
+            if (!isDraggingFloatBall) return;
+            
+            // 计算新位置
+            let x = e.clientX - floatBallOffsetX;
+            let y = e.clientY - floatBallOffsetY;
+            
+            // 限制在窗口内
+            const ballWidth = floatBall.offsetWidth;
+            const ballHeight = floatBall.offsetHeight;
+            x = Math.max(0, Math.min(x, window.innerWidth - ballWidth));
+            y = Math.max(0, Math.min(y, window.innerHeight - ballHeight));
+            
+            // 设置位置
+            floatBall.style.left = `${x}px`;
+            floatBall.style.top = `${y}px`;
+            floatBall.style.bottom = 'auto';
+            floatBall.style.right = 'auto';
+            
+            // 如果面板是打开的，实时更新面板位置
+            if (controlsPanel.classList.contains('show')) {
+                updatePanelPosition();
+            }
+        });
+        
+        document.addEventListener('mouseup', function() {
+            if (isDraggingFloatBall) {
+                isDraggingFloatBall = false;
+                floatBall.style.cursor = 'grab';
+            }
+        });
+        
+        // 移动端悬浮球触摸事件
+        floatBall.addEventListener('touchstart', function(e) {
+            if (e.touches.length !== 1) return;
+            const touch = e.touches[0];
+            
+            isDraggingFloatBall = true;
+            const rect = floatBall.getBoundingClientRect();
+            floatBallOffsetX = touch.clientX - rect.left;
+            floatBallOffsetY = touch.clientY - rect.top;
+            e.preventDefault();
+        });
+        
+        document.addEventListener('touchmove', function(e) {
+            if (!isDraggingFloatBall || e.touches.length !== 1) return;
+            const touch = e.touches[0];
+            
+            let x = touch.clientX - floatBallOffsetX;
+            let y = touch.clientY - floatBallOffsetY;
+            
+            const ballWidth = floatBall.offsetWidth;
+            const ballHeight = floatBall.offsetHeight;
+            x = Math.max(0, Math.min(x, window.innerWidth - ballWidth));
+            y = Math.max(0, Math.min(y, window.innerHeight - ballHeight));
+            
+            floatBall.style.left = `${x}px`;
+            floatBall.style.top = `${y}px`;
+            floatBall.style.bottom = 'auto';
+            floatBall.style.right = 'auto';
+            
+            // 如果面板是打开的，实时更新面板位置
+            if (controlsPanel.classList.contains('show')) {
+                updatePanelPosition();
+            }
+            
+            e.preventDefault();
+        });
+        
+        document.addEventListener('touchend', function() {
+            if (isDraggingFloatBall) {
+                isDraggingFloatBall = false;
+            }
+        });
+
+        // 原有时钟代码
         const hourHand = document.getElementById('hourHand');
         const minuteHand = document.getElementById('minuteHand');
         const secondHand = document.getElementById('secondHand');
         const timeDisplay = document.getElementById('timeDisplay');
         const resetBtn = document.getElementById('resetBtn');
+        const clockContainer = document.getElementById('clockContainer');
 
         let rafId = null;
         let isDragging = false;
@@ -260,6 +747,11 @@
         let currentAngle = 0;
         let isRealTime = true;
         let timer = null;
+        
+        // 时钟容器拖动相关变量
+        let isDraggingClock = false;
+        let offsetX = 0;
+        let offsetY = 0;
         
         // 记录上一次的时间值，用于判断跨0点
         let lastHours = -1;
@@ -274,6 +766,27 @@
         lastHours = hours;
         lastMinutes = minutes;
         lastSeconds = seconds;
+
+        // 设置时钟初始位置
+        function setClocksInitialPosition() {
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+            const clockWidth = clockContainer.offsetWidth;
+            
+            // 实时时钟放在左侧中间
+            const clockLeft = (windowWidth / 2 - clockWidth * 1.2);
+            const clockTop = (windowHeight / 2 - clockWidth / 2);
+            clockContainer.style.position = 'absolute';
+            clockContainer.style.left = `${clockLeft}px`;
+            clockContainer.style.top = `${clockTop}px`;
+            
+            // 计时器放在右侧中间
+            const timerLeft = (windowWidth / 2 + clockWidth * 0.2);
+            const timerTop = (windowHeight / 2 - clockWidth / 2);
+            timerContainer.style.position = 'absolute';
+            timerContainer.style.left = `${timerLeft}px`;
+            timerContainer.style.top = `${timerTop}px`;
+        }
 
         // 更新指针位置和时间显示
         function updateHands() {
@@ -338,8 +851,8 @@
         }
 
         // 计算鼠标/触摸点相对于时钟中心的角度
-        function getAngle(e) {
-            const rect = document.querySelector('.clock-container').getBoundingClientRect();
+        function getAngle(e, containerId = 'clockContainer') {
+            const rect = document.getElementById(containerId).getBoundingClientRect();
             const centerX = rect.left + rect.width / 2;
             const centerY = rect.top + rect.height / 2;
 
@@ -481,17 +994,61 @@
             if (!timer) timer = setInterval(realTimeUpdate, 1000);
         }
 
-        // 事件监听
+        // 开始拖动时钟容器
+        function startDragClock(e) {
+            // 仅排除指针拖动的情况
+            if (isDragging) return;
+            
+            isDraggingClock = true;
+            const rect = clockContainer.getBoundingClientRect();
+            offsetX = e.clientX - rect.left;
+            offsetY = e.clientY - rect.top;
+            clockContainer.style.cursor = 'grabbing';
+            e.preventDefault();
+        }
+
+        // 拖动时钟容器
+        function dragClock(e) {
+            if (!isDraggingClock) return;
+            
+            const x = e.clientX - offsetX;
+            const y = e.clientY - offsetY;
+            
+            // 限制时钟在可视范围内
+            const maxX = window.innerWidth - clockContainer.offsetWidth;
+            const maxY = window.innerHeight - clockContainer.offsetHeight;
+            const constrainedX = Math.max(0, Math.min(x, maxX));
+            const constrainedY = Math.max(0, Math.min(y, maxY));
+            
+            clockContainer.style.left = `${constrainedX}px`;
+            clockContainer.style.top = `${constrainedY}px`;
+            clockContainer.style.position = 'absolute';
+        }
+
+        // 结束拖动时钟容器
+        function endDragClock() {
+            if (isDraggingClock) {
+                isDraggingClock = false;
+                clockContainer.style.cursor = 'grab';
+            }
+        }
+
+        // 原有时钟事件监听
         resetBtn.addEventListener('click', resetToNow);
 
-        // 鼠标事件
+        // 鼠标事件 - 指针拖动
         hourHand.addEventListener('mousedown', (e) => handleMouseDown(e, hourHand));
         minuteHand.addEventListener('mousedown', (e) => handleMouseDown(e, minuteHand));
         secondHand.addEventListener('mousedown', (e) => handleMouseDown(e, secondHand));
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
 
-        // 触摸事件（移动端兼容）
+        // 鼠标事件 - 时钟容器拖动
+        clockContainer.addEventListener('mousedown', startDragClock);
+        document.addEventListener('mousemove', dragClock);
+        document.addEventListener('mouseup', endDragClock);
+
+        // 触摸事件（移动端兼容）- 指针拖动
         hourHand.addEventListener('touchstart', (e) => {
             const touch = e.touches[0];
             handleMouseDown(touch, hourHand);
@@ -512,10 +1069,366 @@
         });
         document.addEventListener('touchend', handleMouseUp);
 
+        // 触摸事件（移动端兼容）- 时钟容器拖动
+        clockContainer.addEventListener('touchstart', (e) => {
+            if (isDragging) return;
+            const touch = e.touches[0];
+            const rect = clockContainer.getBoundingClientRect();
+            offsetX = touch.clientX - rect.left;
+            offsetY = touch.clientY - rect.top;
+            isDraggingClock = true;
+            e.preventDefault();
+        });
+        
+        document.addEventListener('touchmove', (e) => {
+            if (!isDraggingClock) return;
+            const touch = e.touches[0];
+            const x = touch.clientX - offsetX;
+            const y = touch.clientY - offsetY;
+            
+            const maxX = window.innerWidth - clockContainer.offsetWidth;
+            const maxY = window.innerHeight - clockContainer.offsetHeight;
+            const constrainedX = Math.max(0, Math.min(x, maxX));
+            const constrainedY = Math.max(0, Math.min(y, maxY));
+            
+            clockContainer.style.left = `${constrainedX}px`;
+            clockContainer.style.top = `${constrainedY}px`;
+            clockContainer.style.position = 'absolute';
+            e.preventDefault();
+        });
+        
+        document.addEventListener('touchend', endDragClock);
+
+        // 计时器相关代码
+        const timerHourHand = document.getElementById('timerHourHand');
+        const timerMinuteHand = document.getElementById('timerMinuteHand');
+        const timerSecondHand = document.getElementById('timerSecondHand');
+        const timerDisplay = document.getElementById('timerDisplay');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const timerContainer = document.getElementById('timerContainer');
+        const alertSound = document.getElementById('alertSound');
+
+        // 计时器变量
+        let timerRafId = null;
+        let isTimerDragging = false;
+        let currentTimerHand = null;
+        let timerStartAngle = 0;
+        let timerCurrentAngle = 0;
+        let timerHours = 0;
+        let timerMinutes = 0;
+        let timerSeconds = 0;
+        let timerTotalSeconds = 0; // 总秒数，用于倒计时
+        let isTimerRunning = false;
+        let timerInterval = null;
+        // 记录上一次的角度值（而非时间值），适配倒计时反向转动
+        let lastHourAngle = 0;
+        let lastMinuteAngle = 0;
+        let lastSecondAngle = 0;
+        
+        // 计时器容器拖动变量
+        let isDraggingTimer = false;
+        let timerOffsetX = 0;
+        let timerOffsetY = 0;
+
+        // 更新计时器指针和显示（核心修复：适配倒计时反向转动）
+        function updateTimerHands() {
+            if (timerRafId) return;
+            timerRafId = requestAnimationFrame(() => {
+                // 标记需要临时移除过渡的指针
+                const noTransitionHands = [];
+                
+                // 计算当前各指针角度
+                const currentHourAngle = timerHours * 30 + (timerMinutes / 60) * 30;
+                const currentMinuteAngle = timerMinutes * 6 + (timerSeconds / 60) * 6;
+                const currentSecondAngle = timerSeconds * 6;
+                
+                // 修复：倒计时是反向转动，判断角度差是否超过180度（顺时针转远，逆时针转近）
+                // 秒针：从0→354度（0秒→59秒）时，需要移除过渡
+                const secondAngleDiff = Math.abs(currentSecondAngle - lastSecondAngle);
+                if (secondAngleDiff > 180) {
+                    noTransitionHands.push(timerSecondHand);
+                }
+
+                // 分针：从0→354度（0分→59分）时，需要移除过渡
+                const minuteAngleDiff = Math.abs(currentMinuteAngle - lastMinuteAngle);
+                if (minuteAngleDiff > 180) {
+                    noTransitionHands.push(timerMinuteHand);
+                }
+
+                // 时针：从0→330度（0时→11时）时，需要移除过渡
+                const hourAngleDiff = Math.abs(currentHourAngle - lastHourAngle);
+                if (hourAngleDiff > 180) {
+                    noTransitionHands.push(timerHourHand);
+                }
+
+                // 添加无过渡类
+                noTransitionHands.forEach(hand => hand.classList.add('no-transition'));
+                
+                // 应用角度变换
+                timerHourHand.style.transform = `rotate(${currentHourAngle}deg)`;
+                timerMinuteHand.style.transform = `rotate(${currentMinuteAngle}deg)`;
+                timerSecondHand.style.transform = `rotate(${currentSecondAngle}deg)`;
+                
+                // 更新数字显示
+                const displayHours = timerHours < 10 ? '0' + timerHours : timerHours;
+                const displayMinutes = timerMinutes < 10 ? '0' + timerMinutes : timerMinutes;
+                const displaySeconds = timerSeconds < 10 ? '0' + timerSeconds : timerSeconds;
+                timerDisplay.textContent = `${displayHours}:${displayMinutes}:${displaySeconds}`;
+                
+                // 延迟恢复过渡动画
+                setTimeout(() => {
+                    noTransitionHands.forEach(hand => hand.classList.remove('no-transition'));
+                }, 100);
+
+                // 更新上一次的角度记录
+                lastHourAngle = currentHourAngle;
+                lastMinuteAngle = currentMinuteAngle;
+                lastSecondAngle = currentSecondAngle;
+                timerRafId = null;
+            });
+        }
+
+        // 计时器指针拖动开始
+        function handleTimerMouseDown(e, hand) {
+            if (isTimerRunning) return; // 运行中不能拖动
+            
+            isTimerDragging = true;
+            currentTimerHand = hand;
+            timerStartAngle = getAngle(e, 'timerContainer');
+            
+            // 获取当前指针的角度
+            if (hand === timerHourHand) {
+                timerCurrentAngle = timerHours * 30 + (timerMinutes / 60) * 30;
+            } else if (hand === timerMinuteHand) {
+                timerCurrentAngle = timerMinutes * 6 + (timerSeconds / 60) * 6;
+            } else {
+                timerCurrentAngle = timerSeconds * 6;
+            }
+            
+            // 移除过渡动画
+            [timerHourHand, timerMinuteHand, timerSecondHand].forEach(h => h.classList.add('no-transition'));
+            e.preventDefault();
+        }
+
+        // 计时器指针拖动中
+        function handleTimerMouseMove(e) {
+            if (!isTimerDragging) return;
+            
+            const newAngle = getAngle(e, 'timerContainer');
+            let angleDiff = newAngle - timerStartAngle;
+            let finalAngle = timerCurrentAngle + angleDiff;
+            finalAngle = ((finalAngle % 360) + 360) % 360; // 确保角度在0-360之间
+            
+            // 根据拖动的指针更新对应时间
+            if (currentTimerHand === timerHourHand) {
+                // 时针：30度/小时
+                const newHour = Math.round(finalAngle / 30) % 12;
+                timerHours = newHour;
+                updateTimerTotalSeconds();
+                updateTimerHands();
+            } else if (currentTimerHand === timerMinuteHand) {
+                // 分针：6度/分钟
+                const newMinute = Math.round(finalAngle / 6) % 60;
+                timerMinutes = newMinute;
+                updateTimerTotalSeconds();
+                updateTimerHands();
+            } else {
+                // 秒针：6度/秒
+                const newSecond = Math.round(finalAngle / 6) % 60;
+                timerSeconds = newSecond;
+                updateTimerTotalSeconds();
+                updateTimerHands();
+            }
+        }
+
+        // 计时器指针拖动结束
+        function handleTimerMouseUp() {
+            if (isTimerDragging) {
+                isTimerDragging = false;
+                currentTimerHand = null;
+                // 恢复过渡动画
+                [timerHourHand, timerMinuteHand, timerSecondHand].forEach(h => h.classList.remove('no-transition'));
+            }
+        }
+
+        // 更新计时器总秒数
+        function updateTimerTotalSeconds() {
+            timerTotalSeconds = timerHours * 3600 + timerMinutes * 60 + timerSeconds;
+        }
+
+        // 从总秒数更新计时器时间
+        function updateTimerFromTotalSeconds(totalSeconds) {
+            timerTotalSeconds = totalSeconds;
+            timerHours = Math.floor(totalSeconds / 3600);
+            const remaining = totalSeconds % 3600;
+            timerMinutes = Math.floor(remaining / 60);
+            timerSeconds = remaining % 60;
+            updateTimerHands();
+        }
+
+        // 开始/暂停计时器
+        function toggleTimer() {
+            if (timerTotalSeconds <= 0) return; // 没有设置时间则不启动
+            
+            if (isTimerRunning) {
+                // 暂停计时器
+                clearInterval(timerInterval);
+                startBtn.innerHTML = '<i class="fas fa-play btn-icon"></i>';
+            } else {
+                // 开始计时器
+                timerInterval = setInterval(() => {
+                    if (timerTotalSeconds <= 1) {
+                        // 计时结束
+                        clearInterval(timerInterval);
+                        updateTimerFromTotalSeconds(0);
+                        isTimerRunning = false;
+                        startBtn.innerHTML = '<i class="fas fa-play btn-icon"></i>';
+                        // 播放提示音
+                        alertSound.play().catch(e => console.log('无法播放提示音:', e));
+                        return;
+                    }
+                    
+                    // 减少一秒并更新显示
+                    updateTimerFromTotalSeconds(timerTotalSeconds - 1);
+                }, 1000);
+                startBtn.innerHTML = '<i class="fas fa-pause btn-icon"></i>';
+            }
+            
+            isTimerRunning = !isTimerRunning;
+        }
+
+        // 停止并重置计时器
+        function stopTimer() {
+            clearInterval(timerInterval);
+            isTimerRunning = false;
+            updateTimerFromTotalSeconds(0);
+            startBtn.innerHTML = '<i class="fas fa-play btn-icon"></i>';
+        }
+
+        // 快捷设置计时器时间
+        document.querySelectorAll('.quick-time-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                if (isTimerRunning) {
+                    clearInterval(timerInterval);
+                    isTimerRunning = false;
+                    startBtn.innerHTML = '<i class="fas fa-play btn-icon"></i>';
+                }
+                const seconds = parseInt(this.getAttribute('data-time'));
+                updateTimerFromTotalSeconds(seconds);
+            });
+        });
+
+        // 计时器容器拖动事件
+        function startDragTimer(e) {
+            if (isTimerDragging) return;
+            
+            isDraggingTimer = true;
+            const rect = timerContainer.getBoundingClientRect();
+            timerOffsetX = e.clientX - rect.left;
+            timerOffsetY = e.clientY - rect.top;
+            timerContainer.style.cursor = 'grabbing';
+            e.preventDefault();
+        }
+        
+        function dragTimer(e) {
+            if (!isDraggingTimer) return;
+            
+            const x = e.clientX - timerOffsetX;
+            const y = e.clientY - timerOffsetY;
+            
+            const maxX = window.innerWidth - timerContainer.offsetWidth;
+            const maxY = window.innerHeight - timerContainer.offsetHeight;
+            const constrainedX = Math.max(0, Math.min(x, maxX));
+            const constrainedY = Math.max(0, Math.min(y, maxY));
+            
+            timerContainer.style.left = `${constrainedX}px`;
+            timerContainer.style.top = `${constrainedY}px`;
+            timerContainer.style.position = 'absolute';
+        }
+        
+        function endDragTimer() {
+            if (isDraggingTimer) {
+                isDraggingTimer = false;
+                timerContainer.style.cursor = 'grab';
+            }
+        }
+
+        // 计时器事件监听
+        startBtn.addEventListener('click', toggleTimer);
+        stopBtn.addEventListener('click', stopTimer);
+
+        // 计时器指针拖动事件
+        timerHourHand.addEventListener('mousedown', (e) => handleTimerMouseDown(e, timerHourHand));
+        timerMinuteHand.addEventListener('mousedown', (e) => handleTimerMouseDown(e, timerMinuteHand));
+        timerSecondHand.addEventListener('mousedown', (e) => handleTimerMouseDown(e, timerSecondHand));
+        document.addEventListener('mousemove', handleTimerMouseMove);
+        document.addEventListener('mouseup', handleTimerMouseUp);
+
+        // 计时器容器拖动事件
+        timerContainer.addEventListener('mousedown', startDragTimer);
+        document.addEventListener('mousemove', dragTimer);
+        document.addEventListener('mouseup', endDragTimer);
+
+        // 计时器触摸事件
+        timerHourHand.addEventListener('touchstart', (e) => {
+            const touch = e.touches[0];
+            handleTimerMouseDown(touch, timerHourHand);
+        });
+        timerMinuteHand.addEventListener('touchstart', (e) => {
+            const touch = e.touches[0];
+            handleTimerMouseDown(touch, timerMinuteHand);
+        });
+        timerSecondHand.addEventListener('touchstart', (e) => {
+            const touch = e.touches[0];
+            handleTimerMouseDown(touch, timerSecondHand);
+        });
+        document.addEventListener('touchmove', (e) => {
+            if (!isTimerDragging) return;
+            const touch = e.touches[0];
+            handleTimerMouseMove(touch);
+            e.preventDefault();
+        });
+        document.addEventListener('touchend', handleTimerMouseUp);
+
+        // 计时器容器触摸拖动事件
+        timerContainer.addEventListener('touchstart', (e) => {
+            if (isTimerDragging) return;
+            const touch = e.touches[0];
+            const rect = timerContainer.getBoundingClientRect();
+            timerOffsetX = touch.clientX - rect.left;
+            timerOffsetY = touch.clientY - rect.top;
+            isDraggingTimer = true;
+            e.preventDefault();
+        });
+        
+        document.addEventListener('touchmove', (e) => {
+            if (!isDraggingTimer) return;
+            const touch = e.touches[0];
+            const x = touch.clientX - timerOffsetX;
+            const y = touch.clientY - timerOffsetY;
+            
+            const maxX = window.innerWidth - timerContainer.offsetWidth;
+            const maxY = window.innerHeight - timerContainer.offsetHeight;
+            const constrainedX = Math.max(0, Math.min(x, maxX));
+            const constrainedY = Math.max(0, Math.min(y, maxY));
+            
+            timerContainer.style.left = `${constrainedX}px`;
+            timerContainer.style.top = `${constrainedY}px`;
+            timerContainer.style.position = 'absolute';
+            e.preventDefault();
+        });
+        
+        document.addEventListener('touchend', endDragTimer);
+
         // 初始化
         updateHands();
         timer = setInterval(realTimeUpdate, 1000);
+        updateTimerHands();
+        setClocksInitialPosition();
+        
+        // 窗口大小变化时重新定位时钟
+        window.addEventListener('resize', setClocksInitialPosition);
     </script>
 </body>
-
 </html>
